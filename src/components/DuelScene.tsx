@@ -115,9 +115,11 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
 
       if (event.type === 'start') {
         gameEndedRef.current = false;
+        stopAllTimers();
         setSeed(event.seed);
         setLevelId(event.levelId);
         setGameState('countdown');
+        setFlippedCards([]);
         const generatedCards = generateCards(event.seed, event.levelId);
         setCards(generatedCards);
         setMyScore(0);

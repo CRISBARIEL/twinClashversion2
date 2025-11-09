@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Trophy, Star } from 'lucide-react';
+import { ArrowLeft, Trophy, Star, RotateCcw } from 'lucide-react';
 import { GameCore } from './GameCore';
-import { supabase } from '../lib/supabase';
+import { supabase, getOrCreateClientId } from '../lib/supabase';
 
 interface ChallengeSceneProps {
   onBackToMenu: () => void;
 }
 
-const CHALLENGE_LEVELS = [1, 6, 11, 16, 21];
+const ALL_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
+
+function getRandomLevels(count: number): number[] {
+  const shuffled = [...ALL_LEVELS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
 
 export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
+  const [challengeLevels, setChallengeLevels] = useState<number[]>(() => getRandomLevels(5));
   const [currentChallengeIndex, setCurrentChallengeIndex] = useState(0);
   const [completedChallenges, setCompletedChallenges] = useState<Set<number>>(new Set());
   const [isPlaying, setIsPlaying] = useState(false);
@@ -18,29 +24,27 @@ export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
 
   useEffect(() => {
     loadChallengeProgress();
-  }, []);
+  }, [challengeLevels]);
 
   const loadChallengeProgress = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
+      const clientId = getOrCreateClientId();
 
       const { data, error } = await supabase
         .from('scores')
         .select('level_id, score')
-        .eq('user_id', user.id)
-        .in('level_id', CHALLENGE_LEVELS);
+        .eq('client_id', clientId)
+        .in('level_id', challengeLevels);
 
       if (!error && data) {
         const completed = new Set<number>();
         const scoreMap: Record<number, number> = {};
 
         data.forEach(record => {
-          completed.add(record.level_id);
-          scoreMap[record.level_id] = record.score;
+          if (record.level_id) {
+            completed.add(record.level_id);
+            scoreMap[record.level_id] = record.score || 0;
+          }
         });
 
         setCompletedChallenges(completed);
@@ -67,6 +71,14 @@ export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
     setIsPlaying(false);
   };
 
+  const handleResetChallenges = () => {
+    const newLevels = getRandomLevels(5);
+    setChallengeLevels(newLevels);
+    setCompletedChallenges(new Set());
+    setScores({});
+    setLoading(true);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-400 via-orange-500 to-red-600 flex items-center justify-center">
@@ -78,8 +90,8 @@ export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
   if (isPlaying) {
     return (
       <GameCore
-        key={`challenge-${CHALLENGE_LEVELS[currentChallengeIndex]}`}
-        level={CHALLENGE_LEVELS[currentChallengeIndex]}
+        key={`challenge-${challengeLevels[currentChallengeIndex]}-${Date.now()}`}
+        level={challengeLevels[currentChallengeIndex]}
         isDailyChallenge={true}
         onComplete={handleChallengeComplete}
         onBackToMenu={handleBackFromChallenge}
@@ -94,15 +106,24 @@ export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-2xl font-bold text-gray-800">Desafíos Diarios</h2>
-              <p className="text-sm text-gray-600">Completa un desafío cada día</p>
+              <p className="text-sm text-gray-600">5 desafíos aleatorios</p>
             </div>
-            <button
-              onClick={onBackToMenu}
-              className="flex items-center gap-2 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
-            >
-              <ArrowLeft size={18} />
-              Volver
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleResetChallenges}
+                className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+              >
+                <RotateCcw size={18} />
+                Nuevos
+              </button>
+              <button
+                onClick={onBackToMenu}
+                className="flex items-center gap-2 bg-gray-200 text-gray-800 px-4 py-2 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+              >
+                <ArrowLeft size={18} />
+                Volver
+              </button>
+            </div>
           </div>
 
           <div className="bg-gradient-to-r from-yellow-100 to-orange-100 rounded-xl p-4 mb-4">
@@ -110,7 +131,7 @@ export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
               <Trophy className="text-yellow-600" size={32} />
               <div>
                 <div className="text-lg font-bold text-gray-800">
-                  {completedChallenges.size} / {CHALLENGE_LEVELS.length}
+                  {completedChallenges.size} / {challengeLevels.length}
                 </div>
                 <div className="text-xs text-gray-600">Desafíos completados</div>
               </div>
@@ -119,14 +140,14 @@ export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
         </div>
 
         <div className="space-y-4">
-          {CHALLENGE_LEVELS.map((levelId, index) => {
+          {challengeLevels.map((levelId, index) => {
             const isCompleted = completedChallenges.has(levelId);
             const score = scores[levelId] || 0;
-            const isLocked = index > 0 && !completedChallenges.has(CHALLENGE_LEVELS[index - 1]);
+            const isLocked = index > 0 && !completedChallenges.has(challengeLevels[index - 1]);
 
             return (
               <div
-                key={levelId}
+                key={`${levelId}-${index}`}
                 className={`bg-white rounded-2xl shadow-lg p-6 transition-all ${
                   isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-xl cursor-pointer'
                 }`}
@@ -145,7 +166,7 @@ export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-gray-800">
-                        Desafío {index + 1}
+                        Desafío {index + 1} - Nivel {levelId}
                       </h3>
                       <p className="text-sm text-gray-600">
                         {isLocked ? 'Completa el desafío anterior' : isCompleted ? `Puntuación: ${score}` : 'Sin completar'}
@@ -153,10 +174,21 @@ export const ChallengeScene = ({ onBackToMenu }: ChallengeSceneProps) => {
                     </div>
                   </div>
                   {isCompleted && (
-                    <div className="flex items-center gap-1">
-                      <Star className="text-yellow-500 fill-yellow-500" size={20} />
-                      <Star className="text-yellow-500 fill-yellow-500" size={20} />
-                      <Star className="text-yellow-500 fill-yellow-500" size={20} />
+                    <div className="flex flex-col items-end">
+                      <div className="flex items-center gap-1 mb-1">
+                        <Star className="text-yellow-500 fill-yellow-500" size={16} />
+                        <Star className="text-yellow-500 fill-yellow-500" size={16} />
+                        <Star className="text-yellow-500 fill-yellow-500" size={16} />
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectChallenge(index);
+                        }}
+                        className="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded-lg hover:bg-gray-300 transition-colors"
+                      >
+                        Volver a jugar
+                      </button>
                     </div>
                   )}
                   {!isLocked && !isCompleted && (

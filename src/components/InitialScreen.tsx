@@ -20,6 +20,8 @@ export const InitialScreen = ({ onStartGame, onStartDailyChallenge, onStartDuel 
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [equippedThemeName, setEquippedThemeName] = useState('Clásico');
   const logoPlayedRef = useRef(false);
+  const tapCountRef = useRef(0);
+  const tapTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadFromSupabase().then(() => {
@@ -65,13 +67,28 @@ export const InitialScreen = ({ onStartGame, onStartDailyChallenge, onStartDuel 
     });
   };
 
-  // removed custom photo feature
+  const handleAdminTap = () => {
+    tapCountRef.current += 1;
+
+    if (tapTimerRef.current) {
+      clearTimeout(tapTimerRef.current);
+    }
+
+    if (tapCountRef.current >= 5) {
+      setShowAdminPanel(true);
+      tapCountRef.current = 0;
+    } else {
+      tapTimerRef.current = window.setTimeout(() => {
+        tapCountRef.current = 0;
+      }, 2000);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center p-4">
       <div
-        className="fixed top-0 right-0 w-16 h-16 z-40 cursor-pointer"
-        onClick={() => setShowAdminPanel(true)}
+        className="fixed top-0 right-0 w-16 h-16 z-40"
+        onClick={handleAdminTap}
       />
       <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
         <div className="flex justify-center mb-6">
