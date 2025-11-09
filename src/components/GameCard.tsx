@@ -41,8 +41,9 @@ export const GameCard = ({ card, image, onClick, disabled, showHint = false }: G
 
   return (
     <div
-      className="relative aspect-square cursor-pointer perspective-1000"
+      className="relative aspect-square cursor-pointer perspective-1000 touch-manipulation"
       onClick={handleClick}
+      style={{ minHeight: '60px', minWidth: '60px' }}
     >
       <div
         className={`relative w-full h-full transition-transform duration-500 transform-style-3d ${
@@ -50,17 +51,17 @@ export const GameCard = ({ card, image, onClick, disabled, showHint = false }: G
         } ${showHint ? 'hint-pulse' : ''}`}
       >
         <div className="absolute w-full h-full backface-hidden">
-          <div className={`w-full h-full ${skin.cardBackColor} rounded-xl shadow-lg flex items-center justify-center border-4 ${skin.cardBorderColor} ${showHint ? 'ring-4 ring-yellow-400 ring-opacity-75' : ''}`}>
-            <div className="text-4xl text-white font-bold">?</div>
+          <div className={`w-full h-full ${skin.cardBackColor} rounded-lg shadow-md flex items-center justify-center border-2 ${skin.cardBorderColor} ${showHint ? 'ring-2 ring-yellow-400 ring-opacity-75' : ''}`}>
+            <div className="text-2xl sm:text-3xl text-white font-bold">?</div>
             {showHint && (
-              <div className="absolute inset-0 rounded-xl border-4 border-yellow-400 animate-ping opacity-75"></div>
+              <div className="absolute inset-0 rounded-lg border-2 border-yellow-400 animate-ping opacity-75"></div>
             )}
           </div>
         </div>
 
         <div className="absolute w-full h-full backface-hidden rotate-y-180">
-          <div className={`w-full h-full bg-white rounded-xl shadow-lg flex items-center justify-center border-4 ${skin.cardBorderColor} overflow-hidden`}>
-            <div className="text-6xl">{image}</div>
+          <div className={`w-full h-full bg-white rounded-lg shadow-md flex items-center justify-center border-2 ${skin.cardBorderColor} overflow-hidden`}>
+            <div className="text-3xl sm:text-4xl">{image}</div>
           </div>
         </div>
       </div>

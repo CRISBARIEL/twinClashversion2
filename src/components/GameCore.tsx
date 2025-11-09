@@ -372,91 +372,53 @@ export const GameCore = ({ level, onComplete, onBackToMenu, isDailyChallenge = f
   const selectedImages = themeImages.slice(0, pairs);
   const timeLimit = config?.timeLimit || 60;
 
+  const getGridColumns = () => {
+    if (pairs <= 10) return 4;
+    if (pairs <= 12) return 4;
+    if (pairs <= 15) return 5;
+    return 6;
+  };
+
+  const gridCols = getGridColumns();
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex flex-col p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
-        {isDailyChallenge && (
-          <div className="mb-3 text-sm text-gray-600 flex flex-col gap-1">
-            <span>Reto: {seed}</span>
-            {bestScore && (
-              <span className="flex items-center gap-1">
-                <Trophy size={14} className="text-yellow-500" />
-                Mejor: {bestScore.time}s, {bestScore.moves} mov
+    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500">
+      <div className="flex-shrink-0 bg-white shadow-md px-3 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-gray-800">
+              {isDailyChallenge ? 'Reto' : `Nivel ${level}`}
+            </h2>
+            {isDailyChallenge && bestScore && (
+              <span className="flex items-center gap-1 text-xs text-gray-600">
+                <Trophy size={12} className="text-yellow-500" />
+                {bestScore.time}s
               </span>
             )}
           </div>
-        )}
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold text-gray-800">
-            {isDailyChallenge ? 'Reto Diario' : `Nivel ${level}`}
-          </h2>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <SoundGear />
-            <div className={`text-2xl font-bold ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
-              {isPreview ? `Preview: ${Math.max(0, Math.ceil(timeLeft - (timeLimit - PREVIEW_TIME)))}s` : `${timeLeft}s`}
+            <div className={`text-lg font-bold ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+              {isPreview ? `${Math.max(0, Math.ceil(timeLeft - (timeLimit - PREVIEW_TIME)))}s` : `${timeLeft}s`}
             </div>
           </div>
         </div>
         {isDailyChallenge && (
-          <div className="flex gap-4 mb-3 text-sm font-semibold text-gray-700">
-            <span>Tiempo: {timeElapsed}s</span>
-            <span>Movimientos: {moves}</span>
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <button
-            onClick={openExitModal}
-            className="bg-gray-500 text-white py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-gray-600 transition-colors"
-          >
-            <ArrowLeft size={18} />
-            Volver
-          </button>
-          <button
-            onClick={handleRestart}
-            className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors"
-          >
-            <RotateCcw size={18} />
-            Reiniciar
-          </button>
-          {isDailyChallenge && (
-            <button
-              onClick={() => setShowLeaderboard(true)}
-              className="flex-1 bg-yellow-500 text-white py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-yellow-600 transition-colors"
-            >
-              <List size={18} />
-              Top
-            </button>
-          )}
-        </div>
-
-        {!isDailyChallenge && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="text-xs text-gray-600 font-semibold mb-2 text-center">
-              💡 Ayuda Extra (Revela Parejas)
-            </div>
-            <PowerUpButtons
-              onPowerUpUsed={handlePowerUp}
-              disabled={isPreview || gameOver || powerUpUsed}
-            />
-            {powerUpUsed && (
-              <div className="text-xs text-center text-green-600 font-semibold mt-2">
-                ✅ Ayuda usada en este nivel
-              </div>
-            )}
-            <button
-              onClick={() => setShowCoinShop(true)}
-              className="w-full mt-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 rounded-lg font-bold text-sm shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
-            >
-              💰 Comprar Monedas
-            </button>
+          <div className="flex gap-3 text-xs font-semibold text-gray-600">
+            <span>{timeElapsed}s</span>
+            <span>{moves} mov</span>
           </div>
         )}
       </div>
 
-      <div className="flex-1 flex items-center justify-center">
-        <div className="w-full max-w-lg">
-          <div className="grid grid-cols-4 gap-3">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-blue-500 scrollbar-track-transparent p-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex items-center justify-center min-h-full">
+          <div
+            className="grid gap-2 justify-center mx-auto"
+            style={{
+              gridTemplateColumns: `repeat(${gridCols}, minmax(60px, 70px))`
+            }}
+          >
             {cards.map((card) => (
               <GameCard
                 key={card.id}
@@ -469,6 +431,57 @@ export const GameCore = ({ level, onComplete, onBackToMenu, isDailyChallenge = f
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="flex-shrink-0 bg-white border-t border-gray-200 px-3 py-2 sticky bottom-0 z-50">
+        <div className="flex gap-2 mb-2">
+          <button
+            onClick={openExitModal}
+            className="bg-gray-500 text-white py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-gray-600 transition-colors touch-manipulation"
+          >
+            <ArrowLeft size={14} />
+            Salir
+          </button>
+          <button
+            onClick={handleRestart}
+            className="flex-1 bg-orange-500 text-white py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-orange-600 transition-colors touch-manipulation"
+          >
+            <RotateCcw size={14} />
+            Reiniciar
+          </button>
+          {isDailyChallenge && (
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="flex-1 bg-yellow-500 text-white py-2 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-yellow-600 transition-colors touch-manipulation"
+            >
+              <List size={14} />
+              Top
+            </button>
+          )}
+        </div>
+
+        {!isDailyChallenge && (
+          <div className="border-t border-gray-200 pt-2">
+            <div className="text-xs text-gray-600 font-semibold mb-1 text-center">
+              💡 Ayuda
+            </div>
+            <PowerUpButtons
+              onPowerUpUsed={handlePowerUp}
+              disabled={isPreview || gameOver || powerUpUsed}
+            />
+            {powerUpUsed && (
+              <div className="text-xs text-center text-green-600 font-semibold mt-1">
+                ✅ Usada
+              </div>
+            )}
+            <button
+              onClick={() => setShowCoinShop(true)}
+              className="w-full mt-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-3 rounded-lg font-bold text-xs shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-1 touch-manipulation"
+            >
+              💰 Comprar
+            </button>
+          </div>
+        )}
       </div>
 
       {gameOver && (
