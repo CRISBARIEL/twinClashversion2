@@ -3,10 +3,11 @@ import { InitialScreen } from './components/InitialScreen';
 import { GameShell } from './components/GameShell';
 import { GameCore } from './components/GameCore';
 import { DuelScene } from './components/DuelScene';
+import { ChallengeScene } from './components/ChallengeScene';
 import { WorldMap } from './components/WorldMap';
 import { LevelSelector } from './components/LevelSelector';
 
-type Screen = 'menu' | 'game' | 'daily' | 'duel' | 'worldmap' | 'levelselect';
+type Screen = 'menu' | 'game' | 'daily' | 'challenge' | 'duel' | 'worldmap' | 'levelselect';
 
 function App() {
   const [screen, setScreen] = useState<Screen>(() => {
@@ -27,7 +28,7 @@ function App() {
   };
 
   const handleStartDailyChallenge = () => {
-    setScreen('daily');
+    setScreen('challenge');
   };
 
   const handleStartDuel = () => {
@@ -82,14 +83,8 @@ function App() {
           onBackToMenu={handleBackToMenu}
         />
       )}
-      {screen === 'daily' && (
-        <GameCore
-          key="daily"
-          level={1}
-          isDailyChallenge={true}
-          onComplete={handleBackToMenu}
-          onBackToMenu={handleBackToMenu}
-        />
+      {screen === 'challenge' && (
+        <ChallengeScene onBackToMenu={handleBackToMenu} />
       )}
       {screen === 'duel' && (
         <DuelScene onBackToMenu={handleBackToMenu} />

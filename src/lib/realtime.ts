@@ -3,9 +3,10 @@ import { RealtimeChannel } from '@supabase/supabase-js';
 
 export type DuelEvent =
   | { type: 'join'; clientId: string; name?: string }
-  | { type: 'start'; seed: string; duration: number }
+  | { type: 'start'; seed: string; duration: number; levelId: number }
   | { type: 'pair'; clientId: string; pairIndexA: number; pairIndexB: number }
-  | { type: 'end'; winnerClientId: string; scoreA: number; scoreB: number };
+  | { type: 'end'; winnerClientId: string; scoreA: number; scoreB: number }
+  | { type: 'exit'; clientId: string };
 
 export class DuelRoom {
   private channel: RealtimeChannel | null = null;

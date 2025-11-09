@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Calendar, Swords, ShoppingBag, Gift, Coins, Palette } from 'lucide-react';
-// removed custom photo feature
 import { canClaimDaily, claimDailyReward, getLocalCoins, loadFromSupabase } from '../lib/progression';
 import { Shop } from './Shop';
+import { AdminPanel } from './AdminPanel';
 import { getEquippedTheme, getSkinById } from '../lib/skins';
 import { playSoundZap } from '../utils/soundManager';
 import { soundManager } from '../lib/sound';
@@ -15,11 +15,11 @@ interface InitialScreenProps {
 
 export const InitialScreen = ({ onStartGame, onStartDailyChallenge, onStartDuel }: InitialScreenProps) => {
   const [showShop, setShowShop] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [coins, setCoins] = useState(0);
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [equippedThemeName, setEquippedThemeName] = useState('Clásico');
   const logoPlayedRef = useRef(false);
-  // removed custom photo feature
 
   useEffect(() => {
     loadFromSupabase().then(() => {
@@ -69,6 +69,10 @@ export const InitialScreen = ({ onStartGame, onStartDailyChallenge, onStartDuel 
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex items-center justify-center p-4">
+      <div
+        className="fixed top-0 right-0 w-16 h-16 z-40 cursor-pointer"
+        onClick={() => setShowAdminPanel(true)}
+      />
       <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-md w-full">
         <div className="flex justify-center mb-6">
           <img
@@ -135,6 +139,8 @@ export const InitialScreen = ({ onStartGame, onStartDailyChallenge, onStartDuel 
       </div>
 
       {showShop && <Shop onClose={handleShopClose} onSkinChanged={() => {}} />}
+
+      {showAdminPanel && <AdminPanel onClose={() => setShowAdminPanel(false)} />}
 
       {showDailyReward && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

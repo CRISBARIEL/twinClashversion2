@@ -5,18 +5,17 @@ import { DuelInvitePanel } from './DuelInvitePanel';
 import { Card } from '../types';
 import { getImagesForLevel } from '../utils/imageManager';
 import { prng } from '../lib/seed';
-// removed custom photo feature
 import { getOrCreateClientId } from '../lib/supabase';
 import { DuelRoom } from '../lib/realtime';
 import { createConfetti } from '../utils/confetti';
 import { addCoins } from '../lib/progression';
+import { getLevelConfig } from '../lib/levels';
 
 interface DuelSceneProps {
   onBackToMenu: () => void;
 }
 
-const DUEL_DURATION = 60;
-const PAIRS_COUNT = 6;
+const DUEL_LEVELS = [6, 16, 31, 36];
 const PREVIEW_DURATION = 3;
 
 export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
@@ -35,13 +34,16 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
   });
 
   const [gameState, setGameState] = useState<'lobby' | 'countdown' | 'preview' | 'playing' | 'ended'>('lobby');
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const [levelId, setLevelId] = useState(DUEL_LEVELS[0]);
   const [seed, setSeed] = useState('');
   const [cards, setCards] = useState<Card[]>([]);
   const [flippedCards, setFlippedCards] = useState<number[]>([]);
-  const [takenPairs, setTakenPairs] = useState<Set<number>>(new Set());
+  const [myMatchedPairs, setMyMatchedPairs] = useState<Set<number>>(new Set());
+  const [opponentMatchedPairs, setOpponentMatchedPairs] = useState<Set<number>>(new Set());
   const [myScore, setMyScore] = useState(0);
   const [opponentScore, setOpponentScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(DUEL_DURATION);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [countdown, setCountdown] = useState(3);
   const [previewTime, setPreviewTime] = useState(PREVIEW_DURATION);
   const [opponentConnected, setOpponentConnected] = useState(false);
@@ -58,9 +60,12 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
   const playersRef = useRef<Set<string>>(new Set([clientId]));
   const gameEndedRef = useRef(false);
 
-  const generateCards = useCallback((gameSeed: string) => {
-    const levelImages = getImagesForLevel(1);
-    const cardPairs = levelImages.slice(0, PAIRS_COUNT).flatMap((img, idx) => [
+  const generateCards = useCallback((gameSeed: string, levelIdToUse: number) => {
+    const levelConfig = getLevelConfig(levelIdToUse);
+    const pairsCount = levelConfig?.pairs || 6;
+    const levelImages = getImagesForLevel(levelIdToUse);
+
+    const cardPairs = levelImages.slice(0, pairsCount).flatMap((img, idx) => [
       { id: idx * 2, imageIndex: idx, isFlipped: false, isMatched: false },
       { id: idx * 2 + 1, imageIndex: idx, isFlipped: false, isMatched: false },
     ]);
@@ -111,11 +116,16 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
       if (event.type === 'start') {
         gameEndedRef.current = false;
         setSeed(event.seed);
+        setLevelId(event.levelId);
         setGameState('countdown');
-        const generatedCards = generateCards(event.seed);
+        const generatedCards = generateCards(event.seed, event.levelId);
         setCards(generatedCards);
         setMyScore(0);
         setOpponentScore(0);
+        setMyMatchedPairs(new Set());
+        setOpponentMatchedPairs(new Set());
+        const levelConfig = getLevelConfig(event.levelId);
+        setTimeLeft(levelConfig?.timeLimit || 60);
       }
 
       if (event.type === 'pair') {
@@ -124,23 +134,13 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
         const cardB = cards.find((c) => c.id === pairIndexB);
 
         if (cardA && cardB && cardA.imageIndex === cardB.imageIndex) {
-          setTakenPairs((prev) => new Set(prev).add(cardA.imageIndex));
-          setCards((prev) =>
-            prev.map((c) =>
-              c.id === pairIndexA || c.id === pairIndexB ? { ...c, isMatched: true } : c
-            )
-          );
-
           if (eventClientId === clientId) {
-            const newMyScore = myScore + 1;
-            setMyScore(newMyScore);
+            setMyMatchedPairs((prev) => new Set(prev).add(cardA.imageIndex));
+            setMyScore((prev) => prev + 1);
             addCoins(5);
           } else {
-            const newOpponentScore = opponentScore + 1;
-            setOpponentScore(newOpponentScore);
-            if (newOpponentScore >= PAIRS_COUNT) {
-              endGame(eventClientId, myScore, newOpponentScore);
-            }
+            setOpponentMatchedPairs((prev) => new Set(prev).add(cardA.imageIndex));
+            setOpponentScore((prev) => prev + 1);
           }
         }
       }
@@ -178,7 +178,7 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
     };
-  }, [roomId, clientId, generateCards, cards]);
+  }, [roomId, clientId, generateCards, stopAllTimers, onBackToMenu]);
 
   useEffect(() => {
     if (gameState === 'countdown') {
@@ -220,7 +220,6 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
 
   useEffect(() => {
     if (gameState === 'playing') {
-      setTimeLeft(DUEL_DURATION);
       timerRef.current = window.setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
@@ -246,7 +245,8 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
     }
 
     const gameSeed = `duel-${Date.now()}`;
-    duelRoomRef.current?.emit({ type: 'start', seed: gameSeed, duration: DUEL_DURATION });
+    const selectedLevelId = DUEL_LEVELS[currentLevelIndex % DUEL_LEVELS.length];
+    duelRoomRef.current?.emit({ type: 'start', seed: gameSeed, duration: 60, levelId: selectedLevelId });
   };
 
   const endGame = (winnerId: string, finalMyScore: number, finalOpponentScore: number) => {
@@ -281,7 +281,7 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
       if (gameState !== 'playing' || gameState === 'preview' || gameEndedRef.current || isCheckingRef.current || flippedCards.length >= 2) return;
 
       const card = cards.find((c) => c.id === id);
-      if (!card || card.isMatched || flippedCards.includes(id)) return;
+      if (!card || myMatchedPairs.has(card.imageIndex) || opponentMatchedPairs.has(card.imageIndex) || flippedCards.includes(id)) return;
 
       const newFlipped = [...flippedCards, id];
       setFlippedCards(newFlipped);
@@ -299,7 +299,8 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
           firstCard &&
           secondCard &&
           firstCard.imageIndex === secondCard.imageIndex &&
-          !takenPairs.has(firstCard.imageIndex)
+          !myMatchedPairs.has(firstCard.imageIndex) &&
+          !opponentMatchedPairs.has(firstCard.imageIndex)
         ) {
           duelRoomRef.current?.emit({
             type: 'pair',
@@ -308,9 +309,16 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
             pairIndexB: secondId,
           });
 
+          setMyMatchedPairs((prev) => new Set(prev).add(firstCard.imageIndex));
           const newScore = myScore + 1;
-          if (newScore >= PAIRS_COUNT) {
-            endGame(clientId, newScore, opponentScore);
+          setMyScore(newScore);
+          addCoins(5);
+
+          const levelConfig = getLevelConfig(levelId);
+          const totalPairs = levelConfig?.pairs || 6;
+
+          if (newScore + opponentScore >= totalPairs) {
+            endGame(newScore > opponentScore ? clientId : newScore < opponentScore ? 'opponent' : 'tie', newScore, opponentScore);
           }
 
           setFlippedCards([]);
@@ -328,7 +336,7 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
         }
       }
     },
-    [cards, flippedCards, gameState, takenPairs, clientId]
+    [cards, flippedCards, gameState, myMatchedPairs, opponentMatchedPairs, clientId, myScore, opponentScore, levelId]
   );
 
   const copyRoomLink = () => {
@@ -346,14 +354,31 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
     onBackToMenu();
   };
 
-  const levelImages = getImagesForLevel(1);
-  // removed custom photo feature
+  const handleNextLevel = () => {
+    setCurrentLevelIndex((prev) => (prev + 1) % DUEL_LEVELS.length);
+    setShowWinModal(false);
+    setGameState('lobby');
+    setMyScore(0);
+    setOpponentScore(0);
+    setMyMatchedPairs(new Set());
+    setOpponentMatchedPairs(new Set());
+    setCards([]);
+    setFlippedCards([]);
+    gameEndedRef.current = false;
+  };
+
+  const levelImages = getImagesForLevel(levelId);
+  const levelConfig = getLevelConfig(levelId);
+  const currentTheme = levelConfig?.theme || 'sports';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-400 via-pink-500 to-purple-600 flex flex-col p-4">
       <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-bold text-gray-800">Duelo 1v1</h2>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">Duelo 1v1</h2>
+            <p className="text-xs text-gray-500 capitalize">Tema: {currentTheme}</p>
+          </div>
           <button
             onClick={handleExit}
             className="flex items-center gap-2 bg-red-500 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-600 transition-colors"
@@ -432,15 +457,21 @@ export const DuelScene = ({ onBackToMenu }: DuelSceneProps) => {
         <div className="flex-1 flex items-center justify-center">
           <div className="w-full max-w-lg">
             <div className="grid grid-cols-4 gap-3">
-              {cards.map((card) => (
-                <GameCard
-                  key={card.id}
-                  card={card}
-                  image={levelImages[card.imageIndex]}
-                  onClick={handleCardClick}
-                  disabled={gameState === 'preview' || isCheckingRef.current}
-                />
-              ))}
+              {cards.map((card) => {
+                const isMyMatch = myMatchedPairs.has(card.imageIndex);
+                const isOpponentMatch = opponentMatchedPairs.has(card.imageIndex);
+                const cardWithMatch = { ...card, isMatched: isMyMatch || isOpponentMatch };
+
+                return (
+                  <GameCard
+                    key={card.id}
+                    card={cardWithMatch}
+                    image={levelImages[card.imageIndex]}
+                    onClick={handleCardClick}
+                    disabled={gameState === 'preview' || isCheckingRef.current}
+                  />
+                );
+              })}
             </div>
           </div>
         </div>

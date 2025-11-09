@@ -214,3 +214,34 @@ export const WORLD_COSTS = {
 };
 
 export const LEVEL_UNLOCK_COST = 100;
+
+export async function unlockWorld(worldNum: number): Promise<void> {
+  const worldId = `world-${worldNum}`;
+  const st = await readWorld(worldId);
+
+  const newState: WorldState = {
+    purchased: true,
+    levels: st?.levels || [{ unlocked: true, completed: false, stars: 0 }]
+  };
+
+  if (newState.levels.length === 0) {
+    newState.levels = [{ unlocked: true, completed: false, stars: 0 }];
+  } else {
+    newState.levels[0].unlocked = true;
+  }
+
+  await writeWorld(worldId, newState);
+}
+
+export async function getUnlockedWorlds(): Promise<number[]> {
+  const unlocked: number[] = [];
+
+  for (let i = 1; i <= 10; i++) {
+    const worldId = `world-${i}`;
+    if (await isWorldPurchased(worldId)) {
+      unlocked.push(i);
+    }
+  }
+
+  return unlocked;
+}
