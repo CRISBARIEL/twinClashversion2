@@ -31,22 +31,22 @@ export function PowerUpButtons({ onPowerUpUsed, disabled }: PowerUpButtonsProps)
 
   return (
     <>
-      <div className="flex gap-2 justify-center">
+      <div className="flex gap-1.5">
         <button
           onClick={() => handlePurchase(20, 100)}
           disabled={disabled || coins < 100}
-          className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm shadow-lg transition-all ${
+          className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs shadow-sm transition-all touch-manipulation ${
             disabled || coins < 100
               ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
               : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:scale-105 active:scale-95'
           }`}
         >
-          <div className="flex items-center justify-center gap-1">
-            <Zap size={16} />
+          <div className="flex items-center justify-center gap-0.5">
+            <Zap size={12} />
             <span>20%</span>
           </div>
-          <div className="text-xs flex items-center justify-center gap-1 mt-1">
-            <Coins size={12} />
+          <div className="text-xs flex items-center justify-center gap-0.5">
+            <Coins size={10} />
             <span>100</span>
           </div>
         </button>
@@ -54,18 +54,18 @@ export function PowerUpButtons({ onPowerUpUsed, disabled }: PowerUpButtonsProps)
         <button
           onClick={() => handlePurchase(40, 200)}
           disabled={disabled || coins < 200}
-          className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm shadow-lg transition-all ${
+          className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs shadow-sm transition-all touch-manipulation ${
             disabled || coins < 200
               ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
               : 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white hover:scale-105 active:scale-95'
           }`}
         >
-          <div className="flex items-center justify-center gap-1">
-            <Sparkles size={16} />
+          <div className="flex items-center justify-center gap-0.5">
+            <Sparkles size={12} />
             <span>40%</span>
           </div>
-          <div className="text-xs flex items-center justify-center gap-1 mt-1">
-            <Coins size={12} />
+          <div className="text-xs flex items-center justify-center gap-0.5">
+            <Coins size={10} />
             <span>200</span>
           </div>
         </button>
