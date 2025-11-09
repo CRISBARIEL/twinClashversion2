@@ -372,57 +372,100 @@ export const GameCore = ({ level, onComplete, onBackToMenu, isDailyChallenge = f
   const selectedImages = themeImages.slice(0, pairs);
   const timeLimit = config?.timeLimit || 60;
 
-  const getGridConfig = () => {
-    const totalCards = pairs * 2;
-    if (totalCards <= 20) return { cols: 5, rows: 4 };
-    if (totalCards <= 24) return { cols: 6, rows: 4 };
-    if (totalCards <= 25) return { cols: 5, rows: 5 };
-    if (totalCards <= 30) return { cols: 6, rows: 5 };
-    return { cols: 6, rows: Math.ceil(totalCards / 6) };
+  const getGridColumns = () => {
+    if (pairs <= 10) return 4;
+    if (pairs <= 12) return 4;
+    if (pairs <= 15) return 5;
+    return 6;
   };
 
-  const gridConfig = getGridConfig();
+  const gridCols = getGridColumns();
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 touch-manipulation">
-      <div className="flex-shrink-0 bg-white shadow-md px-2 py-1.5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <h2 className="text-xs sm:text-sm font-bold text-gray-800">
-              {isDailyChallenge ? 'Reto' : `Nv ${level}`}
-            </h2>
-            {isDailyChallenge && bestScore && (
-              <span className="flex items-center gap-0.5 text-xs text-gray-600">
-                <Trophy size={10} className="text-yellow-500" />
-                {bestScore.time}s
-              </span>
-            )}
-            {isDailyChallenge && (
-              <span className="text-xs text-gray-500">
-                {timeElapsed}s • {moves}m
+    <div className="min-h-screen bg-gradient-to-br from-blue-400 via-purple-500 to-pink-500 flex flex-col p-4">
+      <div className="bg-white rounded-2xl shadow-xl p-4 mb-4">
+        {isDailyChallenge && (
+          <div className="mb-3 text-sm text-gray-600 flex flex-col gap-1">
+            <span>Reto: {seed}</span>
+            {bestScore && (
+              <span className="flex items-center gap-1">
+                <Trophy size={14} className="text-yellow-500" />
+                Mejor: {bestScore.time}s, {bestScore.moves} mov
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
+        )}
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-bold text-gray-800">
+            {isDailyChallenge ? 'Reto Diario' : `Nivel ${level}`}
+          </h2>
+          <div className="flex items-center gap-3">
             <SoundGear />
-            <div className={`text-base sm:text-lg font-bold ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
-              {isPreview ? `${Math.max(0, Math.ceil(timeLeft - (timeLimit - PREVIEW_TIME)))}s` : `${timeLeft}s`}
+            <div className={`text-2xl font-bold ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-blue-600'}`}>
+              {isPreview ? `Preview: ${Math.max(0, Math.ceil(timeLeft - (timeLimit - PREVIEW_TIME)))}s` : `${timeLeft}s`}
             </div>
           </div>
         </div>
+        {isDailyChallenge && (
+          <div className="flex gap-4 mb-3 text-sm font-semibold text-gray-700">
+            <span>Tiempo: {timeElapsed}s</span>
+            <span>Movimientos: {moves}</span>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={openExitModal}
+            className="bg-gray-500 text-white py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-gray-600 transition-colors"
+          >
+            <ArrowLeft size={18} />
+            Volver
+          </button>
+          <button
+            onClick={handleRestart}
+            className="flex-1 bg-orange-500 text-white py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-orange-600 transition-colors"
+          >
+            <RotateCcw size={18} />
+            Reiniciar
+          </button>
+          {isDailyChallenge && (
+            <button
+              onClick={() => setShowLeaderboard(true)}
+              className="flex-1 bg-yellow-500 text-white py-2 px-4 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-yellow-600 transition-colors"
+            >
+              <List size={18} />
+              Top
+            </button>
+          )}
+        </div>
+
+        {!isDailyChallenge && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="text-xs text-gray-600 font-semibold mb-2 text-center">
+              💡 Ayuda Extra (Revela Parejas)
+            </div>
+            <PowerUpButtons
+              onPowerUpUsed={handlePowerUp}
+              disabled={isPreview || gameOver || powerUpUsed}
+            />
+            {powerUpUsed && (
+              <div className="text-xs text-center text-green-600 font-semibold mt-2">
+                ✅ Ayuda usada en este nivel
+              </div>
+            )}
+            <button
+              onClick={() => setShowCoinShop(true)}
+              className="w-full mt-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-2 px-4 rounded-lg font-bold text-sm shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+            >
+              💰 Comprar Monedas
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-2 overflow-hidden">
-        <div className="w-full h-full flex items-center justify-center">
-          <div
-            className="grid gap-1.5 sm:gap-2"
-            style={{
-              gridTemplateColumns: `repeat(${gridConfig.cols}, 1fr)`,
-              maxWidth: '85vw',
-              maxHeight: 'calc(100vh - 130px)',
-              aspectRatio: `${gridConfig.cols} / ${gridConfig.rows}`
-            }}
-          >
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-full max-w-lg">
+          <div className="grid grid-cols-4 gap-3">
             {cards.map((card) => (
               <GameCard
                 key={card.id}
@@ -435,56 +478,6 @@ export const GameCore = ({ level, onComplete, onBackToMenu, isDailyChallenge = f
             ))}
           </div>
         </div>
-      </div>
-
-      <div className="flex-shrink-0 bg-white border-t border-gray-200 px-2 py-1.5 sticky bottom-0 z-50">
-        <div className="flex gap-1.5 mb-1.5">
-          <button
-            onClick={openExitModal}
-            className="bg-gray-500 text-white py-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-gray-600 transition-colors touch-manipulation"
-          >
-            <ArrowLeft size={12} />
-            Salir
-          </button>
-          <button
-            onClick={handleRestart}
-            className="flex-1 bg-orange-500 text-white py-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-orange-600 transition-colors touch-manipulation"
-          >
-            <RotateCcw size={12} />
-            Reset
-          </button>
-          {isDailyChallenge && (
-            <button
-              onClick={() => setShowLeaderboard(true)}
-              className="flex-1 bg-yellow-500 text-white py-1.5 px-2.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 hover:bg-yellow-600 transition-colors touch-manipulation"
-            >
-              <List size={12} />
-              Top
-            </button>
-          )}
-        </div>
-
-        {!isDailyChallenge && (
-          <div className="border-t border-gray-200 pt-1.5">
-            <div className="flex gap-1.5">
-              <PowerUpButtons
-                onPowerUpUsed={handlePowerUp}
-                disabled={isPreview || gameOver || powerUpUsed}
-              />
-              <button
-                onClick={() => setShowCoinShop(true)}
-                className="flex-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white py-1.5 px-2 rounded-lg font-bold text-xs shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-1 touch-manipulation"
-              >
-                💰 Shop
-              </button>
-            </div>
-            {powerUpUsed && (
-              <div className="text-xs text-center text-green-600 font-semibold mt-1">
-                ✅ Power-up usado
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
       {gameOver && (
